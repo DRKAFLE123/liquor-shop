@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -16,17 +18,35 @@ class AppServiceProvider extends ServiceProvider
 
     /**
      * Bootstrap any application services.
+     *
+     * Global View Composer: shares $shop and $about across ALL blade views.
+     *
+     * ARCHITECTURE NOTE (Future Multi-Store):
+     * ----------------------------------------
+     * When migrating to multi-store support, replace the ::first() call
+     * below with logic to resolve the active store by request domain/slug:
+     *   $shop = \App\Models\StoreSetting::where('domain', request()->getHost())->first();
      */
     public function boot(): void
     {
-        if (\Illuminate\Support\Facades\Schema::hasTable('store_settings')) {
-            $shop = \App\Models\StoreSetting::first();
-            \Illuminate\Support\Facades\View::share('shop', $shop);
-        }
+        // Share $shop across all views using a View Composer for lazy loading.
+        // This avoids querying the DB on artisan commands that don't need views.
+        View::composer('*', function ($view) {
+            if (Schema::hasTable('store_settings')) {
+                $view->with('shop', \App\Models\StoreSetting::first());
+            }
+        });
 
-        if (\Illuminate\Support\Facades\Schema::hasTable('about_settings')) {
-            $about = \App\Models\AboutSetting::first();
-            \Illuminate\Support\Facades\View::share('about', $about);
-        }
+        View::composer('*', function ($view) {
+            if (Schema::hasTable('about_settings')) {
+                $view->with('about', \App\Models\AboutSetting::first());
+            }
+        });
+
+        View::composer('*', function ($view) {
+            if (Schema::hasTable('categories')) {
+                $view->with('categories', \App\Models\Category::orderBy('name')->get());
+            }
+        });
     }
 }

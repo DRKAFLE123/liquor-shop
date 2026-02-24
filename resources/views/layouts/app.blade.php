@@ -5,17 +5,64 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title', 'Premium Liquor Shop') - {{ config('app.name') }}</title>
+    {{-- DNS prefetch & preconnect for faster external resource resolution --}}
+    <link rel="dns-prefetch" href="https://fonts.googleapis.com">
+    <link rel="dns-prefetch" href="https://fonts.gstatic.com">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://unpkg.com">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    {{-- Fonts with display=swap to prevent render blocking --}}
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+    {{-- Swiper CSS --}}
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
     @stack('styles')
+    {{--
+    JSON-LD Structured Data — LiquorStore Schema
+    Auto-generated from database values. NEVER stored manually in admin.
+    This powers Google rich results and local SEO for "Liquor Store Granbury TX".
+    --}}
+    @if(isset($shop) && $shop)
+        <script type="application/ld+json">
+                            {
+                                "@context": "https://schema.org",
+                                "@type": "LiquorStore",
+                                "name": "{{ $shop->store_name ?? config('app.name') }}",
+                                "image": "{{ $shop->logo ? asset('storage/' . $shop->logo) : '' }}",
+                                "url": "{{ url('/') }}",
+                                "telephone": "{{ $shop->phone }}",
+                                "email": "{{ $shop->email }}",
+                                "address": {
+                                    "@type": "PostalAddress",
+                                    "streetAddress": "{{ trim(($shop->address_line_1 ?? '') . ($shop->address_line_2 ? ', ' . $shop->address_line_2 : '')) }}",
+                                    "addressLocality": "{{ $shop->city }}",
+                                    "addressRegion": "{{ $shop->state }}",
+                                    "postalCode": "{{ $shop->postal_code }}",
+                                    "addressCountry": "{{ $shop->country ?? 'US' }}"
+                                },
+                                "geo": {
+                                    "@type": "GeoCoordinates",
+                                    "latitude": 32.4441,
+                                    "longitude": -97.7937
+                                },
+                                "openingHours": "Mo-Sa 10:00-21:00",
+                                "priceRange": "$$",
+                                "servesCuisine": "Liquor Store",
+                                "areaServed": {
+                                    "@type": "City",
+                                    "name": "{{ $shop->city }}, {{ $shop->state }}"
+                                }
+                            }
+                            </script>
+    @endif
     <style>
         [x-cloak] {
             display: none !important;
         }
+
         /* Show hamburger only on mobile */
         @media (max-width: 767px) {
             .hamburger-btn {
@@ -42,33 +89,97 @@
             }" class="fixed top-0 left-0 right-0 z-50 transition-all duration-300 ease-in-out">
             <nav class="mx-auto px-4 md:px-12 flex justify-between items-center w-full">
 
-                {{-- Logo --}}
-                <a href="/"
-                    class="text-xl sm:text-2xl md:text-3xl font-bold tracking-tighter text-liquor-gold flex items-center group flex-shrink-0">
-                    <span class="mr-1.5">🔱</span>
-                    <span>LIQUOR<span
-                            class="text-white group-hover:text-liquor-gold transition-colors">SHOP</span></span>
+                {{-- Logo/Name — mobile: one or the other, desktop: both if toggle on --}}
+                <a href="/" class="flex items-center gap-3 group flex-shrink-0">
+                    @if($shop->logo ?? false)
+                        <img src="{{ asset('storage/' . $shop->logo) }}" alt="{{ $shop->store_name ?? 'Store Logo' }}"
+                            class="h-10 sm:h-14 md:h-16 w-auto object-contain">
+                    @endif
+                    @if(!($shop->logo ?? false))
+                        {{-- No logo: always show name on all screens --}}
+                        <span class="text-lg sm:text-xl md:text-2xl font-bold tracking-tighter text-liquor-gold">
+                            {{ $shop->store_name ?? 'LIQUOR SHOP' }}
+                        </span>
+                    @elseif($shop->show_name_in_navbar ?? true)
+                        {{-- Logo exists + toggle on: show name only on md+ (hidden on mobile) --}}
+                        <span class="hidden md:inline text-xl md:text-2xl font-bold tracking-tighter text-liquor-gold">
+                            {{ $shop->store_name ?? 'LIQUOR SHOP' }}
+                        </span>
+                    @endif
                 </a>
 
                 {{-- Desktop nav links --}}
                 <div class="hidden md:flex items-center gap-8 lg:gap-12">
-                    @foreach (['Home' => '/', 'Catalogue' => '/catalogue', 'About Us' => '/about', 'Contact' => '/contact'] as $label => $url)
-                        <a href="{{ $url }}"
-                            class="group relative py-2 px-1 text-sm font-bold uppercase tracking-[0.2em] {{ Request::is(trim($url, '/')) || (Request::is('/') && $url == '/') ? 'text-liquor-gold' : 'text-white/75' }} hover:text-white transition-colors">
-                            {{ $label }}
-                            <span
-                                class="absolute bottom-0 left-0 w-full h-0.5 bg-liquor-gold transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
+                    {{-- Home --}}
+                    <a href="/"
+                        class="group relative py-2 px-1 text-sm font-bold uppercase tracking-[0.2em] {{ Request::is('/') ? 'text-liquor-gold' : 'text-white/75' }} hover:text-white transition-colors">
+                        Home
+                        <span class="absolute bottom-0 left-0 w-full h-0.5 bg-liquor-gold transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
+                    </a>
+
+                    {{-- Catalogue — with hover dropdown --}}
+                    <div class="relative" x-data="{ catOpen: false }" @mouseenter="catOpen = true" @mouseleave="catOpen = false">
+                        <a href="/catalogue"
+                            class="group relative py-2 px-1 text-sm font-bold uppercase tracking-[0.2em] {{ Request::is('catalogue*') ? 'text-liquor-gold' : 'text-white/75' }} hover:text-white transition-colors flex items-center gap-1">
+                            Catalogue
+                            <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="catOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            </svg>
+                            <span class="absolute bottom-0 left-0 w-full h-0.5 bg-liquor-gold transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
                         </a>
-                    @endforeach
+
+                        {{-- Categories dropdown --}}
+                        <div x-show="catOpen" x-cloak
+                            x-transition:enter="transition ease-out duration-200"
+                            x-transition:enter-start="opacity-0 -translate-y-2"
+                            x-transition:enter-end="opacity-100 translate-y-0"
+                            x-transition:leave="transition ease-in duration-150"
+                            x-transition:leave-start="opacity-100 translate-y-0"
+                            x-transition:leave-end="opacity-0 -translate-y-2"
+                            class="absolute left-0 top-full mt-2 min-w-[220px] bg-black/95 border border-white/10 rounded-lg shadow-2xl backdrop-blur-sm py-2 z-50">
+
+                            {{-- "All Products" link --}}
+                            <a href="/catalogue"
+                                class="block px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-liquor-gold hover:bg-white/5 transition-colors">
+                                All Products
+                            </a>
+                            <div class="border-t border-white/5 my-1"></div>
+
+                            {{-- Dynamic categories --}}
+                            @if(isset($categories) && $categories->count())
+                                @foreach($categories as $category)
+                                    <a href="/catalogue?category={{ $category->slug }}"
+                                        class="block px-5 py-2.5 text-sm text-white/70 hover:text-liquor-gold hover:bg-white/5 transition-colors">
+                                        {{ $category->name }}
+                                    </a>
+                                @endforeach
+                            @else
+                                <p class="px-5 py-2.5 text-xs text-white/30 italic">No categories yet</p>
+                            @endif
+                        </div>
+                    </div>
+
+                    {{-- About Us --}}
+                    <a href="/about"
+                        class="group relative py-2 px-1 text-sm font-bold uppercase tracking-[0.2em] {{ Request::is('about') ? 'text-liquor-gold' : 'text-white/75' }} hover:text-white transition-colors">
+                        About Us
+                        <span class="absolute bottom-0 left-0 w-full h-0.5 bg-liquor-gold transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
+                    </a>
+
+                    {{-- Contact --}}
+                    <a href="/contact"
+                        class="group relative py-2 px-1 text-sm font-bold uppercase tracking-[0.2em] {{ Request::is('contact') ? 'text-liquor-gold' : 'text-white/75' }} hover:text-white transition-colors">
+                        Contact
+                        <span class="absolute bottom-0 left-0 w-full h-0.5 bg-liquor-gold transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
+                    </a>
                 </div>
 
                 {{-- Right-side icons --}}
                 <div class="flex items-center gap-1 md:gap-10 flex-shrink-0">
 
-                    {{-- Social dropdown --}}
-                    <div class="relative">
-                        <button @click="socialOpen = !socialOpen" @click.outside="socialOpen = false"
-                            :class="socialOpen ? 'text-liquor-gold' : 'text-white/80'"
+                    {{-- Social dropdown — opens on hover --}}
+                    <div class="relative" @mouseenter="socialOpen = true" @mouseleave="socialOpen = false">
+                        <button :class="socialOpen ? 'text-liquor-gold' : 'text-white/80'"
                             class="p-2 hover:text-liquor-gold transition-colors duration-200 focus:outline-none"
                             title="Connect">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -83,7 +194,7 @@
                             x-transition:leave="transition ease-in duration-150"
                             x-transition:leave-start="opacity-100 translate-y-0"
                             x-transition:leave-end="opacity-0 -translate-y-1"
-                            class="absolute right-0 top-9 flex items-center gap-5 py-2">
+                            class="absolute right-0 top-9 flex items-center gap-5 py-2 px-3 bg-black/90 border border-white/10 rounded-lg shadow-xl backdrop-blur-sm">
                             @if($shop->whatsapp ?? false)
                                 <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $shop->whatsapp) }}" target="_blank"
                                     class="text-white hover:text-[#C8A951] transition-all duration-300 hover:scale-110 inline-flex"
@@ -170,23 +281,28 @@
             {{-- Drawer Content --}}
             <div class="flex flex-col h-full py-12 px-8">
 
-                {{-- Logo/Header --}}
-                <div class="mb-12">
-                    <div class="text-xl font-bold tracking-tighter text-liquor-gold flex items-center">
-                        <span class="mr-1.5">🔱</span>
-                        <span>LIQUOR<span class="text-white">SHOP</span></span>
-                    </div>
+                {{-- Logo/Header — stacked: logo on top, name below --}}
+                <div class="mb-12 flex flex-col items-start gap-2">
+                    @if($shop->logo ?? false)
+                        <img src="{{ asset('storage/' . $shop->logo) }}" alt="{{ $shop->store_name ?? 'Store Logo' }}"
+                            class="h-12 w-auto object-contain">
+                    @endif
+                    @if((!($shop->logo ?? false)) || ($shop->show_name_in_navbar ?? true))
+                        <div class="text-lg font-bold tracking-tighter text-liquor-gold">
+                            {{ $shop->store_name ?? 'LIQUOR SHOP' }}
+                        </div>
+                    @endif
                 </div>
 
                 {{-- Nav links --}}
                 <nav class="flex flex-col gap-6 mb-12">
                     @foreach (['Home' => '/', 'Catalogue' => '/catalogue', 'About Us' => '/about', 'Contact' => '/contact'] as $label => $url)
-                                    <a href="{{ $url }}" @click="menuOpen = false" class="text-lg font-bold uppercase tracking-[0.2em] transition-all duration-200
-                                                                                            {{ Request::is(trim($url, '/')) || (Request::is('/') && $url == '/')
+                                                    <a href="{{ $url }}" @click="menuOpen = false" class="text-lg font-bold uppercase tracking-[0.2em] transition-all duration-200
+                                                                                                                                                                                                                            {{ Request::is(trim($url, '/')) || (Request::is('/') && $url == '/')
                         ? 'text-liquor-gold'
                         : 'text-white hover:text-liquor-gold' }}">
-                                        {{ $label }}
-                                    </a>
+                                                        {{ $label }}
+                                                    </a>
                     @endforeach
                 </nav>
 
@@ -241,14 +357,37 @@
             {{-- 3 columns: Brand | Links | Connect --}}
             <div class="grid grid-cols-1 md:grid-cols-3 gap-12 md:gap-10">
 
-                {{-- Brand --}}
+                {{-- Brand & Structured Address --}}
                 <div>
-                    <div class="text-2xl font-bold tracking-tighter text-liquor-gold mb-4">
-                        🔱 LIQUOR<span class="text-white">SHOP</span>
+                    @if($shop->logo ?? false)
+                        <a href="/" class="inline-block mb-3">
+                            <img src="{{ asset('storage/' . $shop->logo) }}" alt="{{ $shop->store_name ?? 'Store Logo' }}"
+                                class="h-12 w-auto object-contain">
+                        </a>
+                    @endif
+                    <div class="text-xl font-bold tracking-tighter text-liquor-gold mb-1 leading-tight">
+                        {{ $shop->store_name ?? 'LIQUOR SHOP' }}
                     </div>
-                    <p class="text-white/35 text-sm leading-relaxed max-w-xs">
+                    <p class="text-white/30 text-xs mb-5 leading-relaxed max-w-xs">
                         {{ $shop->tagline ?? 'Premium spirits, curated for the discerning palate.' }}
                     </p>
+                    {{-- Structured address block — mirrors JSON-LD schema --}}
+                    <address class="not-italic space-y-0.5">
+                        @if($shop->address_line_1 ?? false)
+                            <p class="text-white/45 text-sm">{{ $shop->address_line_1 }}</p>
+                        @endif
+                        @if($shop->address_line_2 ?? false)
+                            <p class="text-white/45 text-sm">{{ $shop->address_line_2 }}</p>
+                        @endif
+                        @if($shop->city ?? false)
+                            <p class="text-white/45 text-sm">{{ $shop->cityStateLine() }}</p>
+                        @endif
+                        @if(($shop->country ?? 'US') === 'US')
+                            <p class="text-white/30 text-xs">United States</p>
+                        @else
+                            <p class="text-white/30 text-xs">{{ $shop->country }}</p>
+                        @endif
+                    </address>
                 </div>
 
                 {{-- Quick Links --}}
@@ -272,7 +411,7 @@
                     <h4 class="text-[10px] font-bold uppercase tracking-[0.3em] text-white/30 mb-8 md:mb-10">Connect
                     </h4>
 
-                    {{-- Contact info --}}
+                    {{-- Contact info — all links are clickable --}}
                     <ul class="space-y-4 mb-8">
                         @if($shop->phone ?? false)
                             <li class="flex items-center group">
@@ -283,7 +422,21 @@
                                             d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                                     </svg>
                                 </span>
-                                <span class="text-white/45 text-sm">{{ $shop->phone }}</span>
+                                <a href="{{ $shop->phoneHref() }}"
+                                    class="text-white/45 hover:text-liquor-gold text-sm transition-colors">{{ $shop->phone }}</a>
+                            </li>
+                        @endif
+                        @if($shop->secondary_phone ?? false)
+                            <li class="flex items-center group">
+                                <span
+                                    class="w-5 h-5 flex items-center justify-start mr-3 text-liquor-gold group-hover:scale-110 transition-transform">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                            d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                    </svg>
+                                </span>
+                                <a href="tel:+1{{ preg_replace('/[^0-9]/', '', $shop->secondary_phone) }}"
+                                    class="text-white/45 hover:text-liquor-gold text-sm transition-colors">{{ $shop->secondary_phone }}</a>
                             </li>
                         @endif
                         @if($shop->email ?? false)
@@ -295,30 +448,17 @@
                                             d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                                     </svg>
                                 </span>
-                                <span class="text-white/45 text-sm break-all">{{ $shop->email }}</span>
-                            </li>
-                        @endif
-                        @if($shop->address ?? false)
-                            <li class="flex items-start group">
-                                <span
-                                    class="w-5 h-5 flex items-center justify-start mr-3 mt-0.5 text-liquor-gold group-hover:scale-110 transition-transform flex-shrink-0">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                            d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                </span>
-                                <span class="text-white/45 text-sm">{{ $shop->address }}</span>
+                                <a href="mailto:{{ $shop->email }}"
+                                    class="text-white/45 hover:text-liquor-gold text-sm break-all transition-colors">{{ $shop->email }}</a>
                             </li>
                         @endif
                     </ul>
 
-                    {{-- Social icons row --}}
-                    @if(($shop->whatsapp ?? false) || ($shop->facebook ?? false) || ($shop->instagram ?? false))
+                    {{-- Social icons row — WhatsApp auto-formatted via model helper --}}
+                    @if(($shop->whatsapp ?? false) || ($shop->facebook ?? false) || ($shop->instagram ?? false) || ($shop->google_business ?? false))
                         <div class="flex items-center gap-6 pt-6 mt-2 border-t border-white/5">
                             @if($shop->whatsapp ?? false)
-                                <a href="https://wa.me/{{ preg_replace('/[^0-9]/', '', $shop->whatsapp) }}" target="_blank"
+                                <a href="{{ $shop->whatsappUrl() }}" target="_blank"
                                     class="text-white/35 hover:text-[#C8A951] transition-all duration-300 hover:scale-110 inline-flex"
                                     title="WhatsApp">
                                     <svg style="width:20px;height:20px" fill="currentColor" viewBox="0 0 24 24">
@@ -357,16 +497,25 @@
             <div
                 class="mt-12 pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
                 <p class="text-white/20 text-xs tracking-wide">
-                    © {{ date('Y') }} {{ $shop->name ?? 'LiquorShop' }}. All rights reserved.
+                    © {{ date('Y') }} {{ $shop->store_name ?? config('app.name') }}. All rights reserved.
                 </p>
-                <p class="text-white/10 text-xs tracking-wide">Drink responsibly. 18+ only.</p>
+                <div class="flex flex-col sm:flex-row items-center gap-3 text-right">
+                    <p class="text-white/10 text-xs">Must be 21+ to purchase alcohol. Drink responsibly.</p>
+                    @if($shop->license_number ?? false)
+                        <p class="text-white/10 text-xs">TABC License: {{ $shop->license_number }}</p>
+                    @endif
+                </div>
             </div>
 
         </div>
     </footer>
 
     @stack('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    {{-- Swiper JS deferred to end of body --}}
+    <script defer src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    {{-- Instant.page: preloads links on hover, making navigation feel instant --}}
+    <script src="//instant.page/5.2.0" type="module"
+        integrity="sha384-jnZyxPjiipYXnSU+ygvAzKQaNFMaFBNJsJ7HnC9LNNMKtJ/ld7Yfmm7CfTaFIWT"></script>
 </body>
 
 </html>

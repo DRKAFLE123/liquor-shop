@@ -97,7 +97,7 @@
                     <a href="/catalogue?category={{ $category->slug }}" class="group relative aspect-square overflow-hidden bg-black/40 border border-white/5 flex flex-col items-center justify-center p-8 hover:border-liquor-gold/50 transition-all">
                         <div class="w-full h-full absolute inset-0 group-hover:scale-110 transition-transform">
                             @if($category->image)
-                                <img src="{{ asset('storage/' . $category->image) }}" alt="{{ $category->name }}" class="w-full h-full object-cover opacity-40">
+                                <img src="{{ asset('storage/' . $category->image) }}" alt="{{ $category->name }}" loading="lazy" decoding="async" class="w-full h-full object-cover opacity-40">
                             @else
                                 <div class="w-full h-full flex items-center justify-center text-3xl">
                                     @if($category->slug == 'whisky') 🥃
@@ -135,7 +135,7 @@
                         <div class="relative aspect-[3/4] bg-liquor-dark mb-6 overflow-hidden border border-white/5 group-hover:border-liquor-gold/30 transition-all">
                             <div class="absolute inset-0 flex items-center justify-center bg-black/20">
                                 @if($product->image)
-                                    <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" class="w-full h-full object-cover">
+                                    <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" loading="lazy" decoding="async" class="w-full h-full object-cover">
                                 @else
                                     <span class="text-6xl group-hover:scale-110 transition-transform">
                                          @if($product->category->slug == 'whisky') 🥃
@@ -172,7 +172,7 @@
             <div class="relative">
                 <div class="aspect-square bg-gray-900 overflow-hidden">
                     <img src="{{ $heritage && $heritage->image ? asset('storage/' . $heritage->image) : 'https://images.unsplash.com/photo-1563191799-2c7e8c185bb3?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80' }}" 
-                         alt="Liquor Store" class="w-full h-full object-cover">
+                     alt="Liquor Store" loading="lazy" decoding="async" class="w-full h-full object-cover">
                 </div>
                 <div class="absolute -bottom-8 -right-8 bg-liquor-gold p-8 hidden md:block">
                     <p class="text-4xl font-bold text-black tracking-tighter">{{ $heritage->experience_years ?? '25+' }}</p>

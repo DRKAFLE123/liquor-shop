@@ -18,8 +18,8 @@
                 <div
                     class="bg-liquor-dark aspect-square flex items-center justify-center border border-white/5 overflow-hidden">
                     @if($product->image)
-                        <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}"
-                            class="w-full h-full object-cover">
+                        <img src="{{ asset('storage/' . $product->image) }}" alt="{{ $product->name }}" loading="eager"
+                            decoding="async" class="w-full h-full object-cover">
                     @else
                         <span class="text-[12rem]">
                             @if($product->category->slug == 'whisky') 🥃
@@ -84,8 +84,8 @@
                                     <div
                                         class="absolute inset-0 flex items-center justify-center bg-black/20 text-4xl group-hover:scale-110 transition-transform">
                                         @if($rel->image)
-                                            <img src="{{ asset('storage/' . $rel->image) }}" alt="{{ $rel->name }}"
-                                                class="w-full h-full object-cover">
+                                            <img src="{{ asset('storage/' . $rel->image) }}" alt="{{ $rel->name }}" loading="lazy"
+                                                decoding="async" class="w-full h-full object-cover">
                                         @else
                                             @if($rel->category->slug == 'whisky') 🥃
                                             @elseif($rel->category->slug == 'beer') 🍺
