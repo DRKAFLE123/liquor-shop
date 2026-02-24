@@ -27,36 +27,36 @@
     --}}
     @if(isset($shop) && $shop)
         <script type="application/ld+json">
-                            {
-                                "@context": "https://schema.org",
-                                "@type": "LiquorStore",
-                                "name": "{{ $shop->store_name ?? config('app.name') }}",
-                                "image": "{{ $shop->logo ? asset('storage/' . $shop->logo) : '' }}",
-                                "url": "{{ url('/') }}",
-                                "telephone": "{{ $shop->phone }}",
-                                "email": "{{ $shop->email }}",
-                                "address": {
-                                    "@type": "PostalAddress",
-                                    "streetAddress": "{{ trim(($shop->address_line_1 ?? '') . ($shop->address_line_2 ? ', ' . $shop->address_line_2 : '')) }}",
-                                    "addressLocality": "{{ $shop->city }}",
-                                    "addressRegion": "{{ $shop->state }}",
-                                    "postalCode": "{{ $shop->postal_code }}",
-                                    "addressCountry": "{{ $shop->country ?? 'US' }}"
-                                },
-                                "geo": {
-                                    "@type": "GeoCoordinates",
-                                    "latitude": 32.4441,
-                                    "longitude": -97.7937
-                                },
-                                "openingHours": "Mo-Sa 10:00-21:00",
-                                "priceRange": "$$",
-                                "servesCuisine": "Liquor Store",
-                                "areaServed": {
-                                    "@type": "City",
-                                    "name": "{{ $shop->city }}, {{ $shop->state }}"
-                                }
-                            }
-                            </script>
+                                    {
+                                        "@context": "https://schema.org",
+                                        "@type": "LiquorStore",
+                                        "name": "{{ $shop->store_name ?? config('app.name') }}",
+                                        "image": "{{ $shop->logo ? asset('storage/' . $shop->logo) : '' }}",
+                                        "url": "{{ url('/') }}",
+                                        "telephone": "{{ $shop->phone }}",
+                                        "email": "{{ $shop->email }}",
+                                        "address": {
+                                            "@type": "PostalAddress",
+                                            "streetAddress": "{{ trim(($shop->address_line_1 ?? '') . ($shop->address_line_2 ? ', ' . $shop->address_line_2 : '')) }}",
+                                            "addressLocality": "{{ $shop->city }}",
+                                            "addressRegion": "{{ $shop->state }}",
+                                            "postalCode": "{{ $shop->postal_code }}",
+                                            "addressCountry": "{{ $shop->country ?? 'US' }}"
+                                        },
+                                        "geo": {
+                                            "@type": "GeoCoordinates",
+                                            "latitude": 32.4441,
+                                            "longitude": -97.7937
+                                        },
+                                        "openingHours": "Mo-Sa 10:00-21:00",
+                                        "priceRange": "$$",
+                                        "servesCuisine": "Liquor Store",
+                                        "areaServed": {
+                                            "@type": "City",
+                                            "name": "{{ $shop->city }}, {{ $shop->state }}"
+                                        }
+                                    }
+                                    </script>
     @endif
     <style>
         [x-cloak] {
@@ -73,6 +73,81 @@
 </head>
 
 <body class="antialiased bg-liquor-dark text-white font-poppins min-h-screen flex flex-col">
+
+    {{-- ============================================================
+    AGE VERIFICATION POPUP — 21+ (Texas / US compliance)
+    Appears once per browser. Stored in localStorage.
+    ============================================================ --}}
+    <div x-data="{
+            verified: localStorage.getItem('age_verified') === 'true',
+            confirm() {
+                localStorage.setItem('age_verified', 'true');
+                this.verified = true;
+            },
+            deny() {
+                window.location.href = 'https://www.google.com';
+            }
+        }" x-show="!verified" x-cloak x-transition:enter="transition ease-out duration-500"
+        x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+        x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100"
+        x-transition:leave-end="opacity-0"
+        class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-md"
+        style="overscroll-behavior: contain;" @keydown.escape.prevent>
+
+        {{-- Card --}}
+        <div x-show="!verified" x-transition:enter="transition ease-out duration-500 delay-200"
+            x-transition:enter-start="opacity-0 scale-90 translate-y-8"
+            x-transition:enter-end="opacity-100 scale-100 translate-y-0"
+            class="relative mx-4 w-full max-w-md bg-gradient-to-b from-[#1a1a1a] to-[#111] border border-white/10 rounded-2xl shadow-2xl p-8 sm:p-10 text-center overflow-hidden">
+
+            {{-- Gold accent line --}}
+            <div
+                class="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#C8A951] to-transparent">
+            </div>
+
+            {{-- Logo or Store Name --}}
+            <div class="mb-6">
+                @if($shop->logo ?? false)
+                    <img src="{{ asset('storage/' . $shop->logo) }}" alt="{{ $shop->store_name ?? 'Store Logo' }}"
+                        class="h-16 mx-auto object-contain mb-3">
+                @endif
+                <h2 class="text-xl sm:text-2xl font-bold tracking-tighter text-liquor-gold">
+                    {{ $shop->store_name ?? config('app.name') }}
+                </h2>
+            </div>
+
+            {{-- Icon --}}
+            <div class="mx-auto w-16 h-16 rounded-full bg-[#C8A951]/10 flex items-center justify-center mb-5">
+                <span class="text-3xl">🍷</span>
+            </div>
+
+            {{-- Heading --}}
+            <h3 class="text-lg sm:text-xl font-bold text-white mb-2">Age Verification Required</h3>
+            <p class="text-sm text-white/50 mb-8 leading-relaxed">
+                You must be <span class="text-liquor-gold font-bold">21 years or older</span> to enter this site.<br>
+                By clicking "Yes", you confirm that you are of legal drinking age.
+            </p>
+
+            {{-- Buttons --}}
+            <div class="flex flex-col sm:flex-row gap-3">
+                <button @click="confirm()"
+                    class="flex-1 bg-[#C8A951] hover:bg-[#b8993d] text-black font-bold py-3.5 px-6 rounded-lg uppercase tracking-widest text-sm transition-all duration-300 hover:shadow-lg hover:shadow-[#C8A951]/20">
+                    Yes, I'm 21+
+                </button>
+                <button @click="deny()"
+                    class="flex-1 bg-transparent border border-white/20 hover:border-red-500/50 hover:text-red-400 text-white/50 font-bold py-3.5 px-6 rounded-lg uppercase tracking-widest text-sm transition-all duration-300">
+                    No, I'm Not
+                </button>
+            </div>
+
+            {{-- Legal --}}
+            <p class="text-[10px] text-white/20 mt-6 leading-relaxed">
+                This website contains information about alcoholic beverages. It is intended for an audience of legal
+                drinking age.
+                Please drink responsibly.
+            </p>
+        </div>
+    </div>
 
     {{-- ============================================================
     HEADER + MOBILE DRAWER — single Alpine scope
@@ -114,23 +189,28 @@
                     <a href="/"
                         class="group relative py-2 px-1 text-sm font-bold uppercase tracking-[0.2em] {{ Request::is('/') ? 'text-liquor-gold' : 'text-white/75' }} hover:text-white transition-colors">
                         Home
-                        <span class="absolute bottom-0 left-0 w-full h-0.5 bg-liquor-gold transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
+                        <span
+                            class="absolute bottom-0 left-0 w-full h-0.5 bg-liquor-gold transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
                     </a>
 
                     {{-- Catalogue — with hover dropdown --}}
-                    <div class="relative" x-data="{ catOpen: false }" @mouseenter="catOpen = true" @mouseleave="catOpen = false">
+                    <div class="relative" x-data="{ catOpen: false }" @mouseenter="catOpen = true"
+                        @mouseleave="catOpen = false">
                         <a href="/catalogue"
                             class="group relative py-2 px-1 text-sm font-bold uppercase tracking-[0.2em] {{ Request::is('catalogue*') ? 'text-liquor-gold' : 'text-white/75' }} hover:text-white transition-colors flex items-center gap-1">
                             Catalogue
-                            <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="catOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                            <svg class="w-3.5 h-3.5 transition-transform duration-200"
+                                :class="catOpen ? 'rotate-180' : ''" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 9l-7 7-7-7" />
                             </svg>
-                            <span class="absolute bottom-0 left-0 w-full h-0.5 bg-liquor-gold transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
+                            <span
+                                class="absolute bottom-0 left-0 w-full h-0.5 bg-liquor-gold transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
                         </a>
 
                         {{-- Categories dropdown --}}
-                        <div x-show="catOpen" x-cloak
-                            x-transition:enter="transition ease-out duration-200"
+                        <div x-show="catOpen" x-cloak x-transition:enter="transition ease-out duration-200"
                             x-transition:enter-start="opacity-0 -translate-y-2"
                             x-transition:enter-end="opacity-100 translate-y-0"
                             x-transition:leave="transition ease-in duration-150"
@@ -163,14 +243,16 @@
                     <a href="/about"
                         class="group relative py-2 px-1 text-sm font-bold uppercase tracking-[0.2em] {{ Request::is('about') ? 'text-liquor-gold' : 'text-white/75' }} hover:text-white transition-colors">
                         About Us
-                        <span class="absolute bottom-0 left-0 w-full h-0.5 bg-liquor-gold transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
+                        <span
+                            class="absolute bottom-0 left-0 w-full h-0.5 bg-liquor-gold transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
                     </a>
 
                     {{-- Contact --}}
                     <a href="/contact"
                         class="group relative py-2 px-1 text-sm font-bold uppercase tracking-[0.2em] {{ Request::is('contact') ? 'text-liquor-gold' : 'text-white/75' }} hover:text-white transition-colors">
                         Contact
-                        <span class="absolute bottom-0 left-0 w-full h-0.5 bg-liquor-gold transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
+                        <span
+                            class="absolute bottom-0 left-0 w-full h-0.5 bg-liquor-gold transform scale-x-0 group-hover:scale-x-100 transition-transform duration-300"></span>
                     </a>
                 </div>
 
@@ -297,12 +379,12 @@
                 {{-- Nav links --}}
                 <nav class="flex flex-col gap-6 mb-12">
                     @foreach (['Home' => '/', 'Catalogue' => '/catalogue', 'About Us' => '/about', 'Contact' => '/contact'] as $label => $url)
-                                                    <a href="{{ $url }}" @click="menuOpen = false" class="text-lg font-bold uppercase tracking-[0.2em] transition-all duration-200
-                                                                                                                                                                                                                            {{ Request::is(trim($url, '/')) || (Request::is('/') && $url == '/')
+                                    <a href="{{ $url }}" @click="menuOpen = false" class="text-lg font-bold uppercase tracking-[0.2em] transition-all duration-200
+                                                                                                                                                                                                                                                            {{ Request::is(trim($url, '/')) || (Request::is('/') && $url == '/')
                         ? 'text-liquor-gold'
                         : 'text-white hover:text-liquor-gold' }}">
-                                                        {{ $label }}
-                                                    </a>
+                                        {{ $label }}
+                                    </a>
                     @endforeach
                 </nav>
 
@@ -514,8 +596,7 @@
     {{-- Swiper JS deferred to end of body --}}
     <script defer src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
     {{-- Instant.page: preloads links on hover, making navigation feel instant --}}
-    <script src="//instant.page/5.2.0" type="module"
-        integrity="sha384-jnZyxPjiipYXnSU+ygvAzKQaNFMaFBNJsJ7HnC9LNNMKtJ/ld7Yfmm7CfTaFIWT"></script>
+    <script src="//instant.page/5.2.0" type="module"></script>
 </body>
 
 </html>

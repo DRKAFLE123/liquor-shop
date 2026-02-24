@@ -3,8 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\Models\Category;
+use App\Models\Contact;
 use App\Models\Product;
+use App\Models\StoreSetting;
+use App\Mail\ContactFormMail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 
 class PageController extends Controller
 {
@@ -40,12 +45,31 @@ class PageController extends Controller
     public function contactSend(Request $request)
     {
         $validated = $request->validate([
-            'name' => 'required',
-            'email' => 'required|email',
-            'message' => 'required',
+            'name' => 'required|string|max:255',
+            'email' => 'required|email|max:255',
+            'subject' => 'nullable|string|max:255',
+            'message' => 'required|string|max:5000',
         ]);
 
-        // In a real app, send mail here
-        return back()->with('success', 'Thank you for your message. We will get back to you soon!');
+        // 1. Save to database
+        Contact::create($validated);
+
+        // 2. Send email notification to the store
+        try {
+            $recipientEmail = StoreSetting::first()?->email ?? config('mail.from.address');
+
+            Mail::to($recipientEmail)->send(new ContactFormMail(
+                senderName: $validated['name'],
+                senderEmail: $validated['email'],
+                contactSubject: $validated['subject'] ?? null,
+                senderMessage: $validated['message'],
+            ));
+        } catch (\Exception $e) {
+            // Log the error but don't block the user — their message is already saved
+            Log::error('Contact form email failed: ' . $e->getMessage());
+        }
+
+        return back()->with('success', 'Thank you for your message! We\'ll get back to you shortly.');
     }
 }
+
